@@ -5,6 +5,8 @@ import platform
 import PySimpleGUI as sg
 import pyperclip
 import time
+import os
+import json
 
 
 def get_public_ip():
@@ -63,6 +65,39 @@ def get_sys_info():
     return sys_str, ip_address
 
 
+def load_data(path1='./data/data.json'):
+    """
+    用于加载公网ip列表
+    :param path1: 保存路径
+    :return:
+    """
+    dir_name = os.path.dirname(path1)
+    if not os.path.exists(dir_name):  # 如果文件夹不存在
+        os.mkdir(dir_name)  # 创建文件夹
+    if not os.path.exists(path1):  # 如果文件路径不存在
+        with open(path1, 'wt', encoding='utf-8') as f:
+            list1 = []
+            json.dump(obj=list1, fp=f)
+            return []
+    else:
+        with open(path1, 'rt', encoding='utf-8') as f:
+            list1 = json.load(f)
+            f.close()
+            return list1
+
+
+def save_data(list1, path1='./data/data.json'):
+    """
+    此函数用于储存数据到json中
+    :param list1: Ip数据
+    :param path1: json路径
+    :return:
+    """
+    with open(path1, 'wt+', encoding='utf-8') as f:
+        json.dump(list1, f)
+        f.close()
+
+
 if __name__ == "__main__":
     system_info, local_ip = get_sys_info()  # 获取系统信息和局域网ip
     public_ip = get_public_ip()   # 获取公网ip地址
@@ -74,31 +109,47 @@ if __name__ == "__main__":
         [sg.Text('当前系统：'), sg.Text(system_info)],
         [sg.Text('局域网ip:'), sg.Text(local_ip), sg.Button('复制1')],
         [sg.Text('公网ip:'), sg.Text(public_ip), sg.Button('复制2')],
-        [sg.Button('退出')]
+        [sg.Button('检测ip变动'), sg.Button('退出')]
     ]
-    windows = sg.Window('python网络查询工具', layout=layout, font=my_font_style1, size=(300, 140))
+    windows = sg.Window('python网络查询工具V1.01', layout=layout, font=my_font_style1, size=(300, 140))
     for i in range(5):
         event, values = windows.read()
         if event in (None, '退出'):
             break
-        if event == '复制1':
+        elif event == '复制1':
             try:
                 pyperclip.copy(local_ip)
             except Exception as err:
                 if system_info == 'Linux':
                     sg.popup('错误，你的系统可能缺少相应安装包',
                              '请输入以下指令安装相关依赖',
-                             'sudo apt-get install xsel xclip', title='错误')
+                             'sudo apt-get install xsel xclip', title='错误', font=my_font_style1)
                 else:
                     sg.popup(err)
-        if event == '复制2':
+        elif event == '复制2':
             try:
                 pyperclip.copy(public_ip)
             except Exception as err:
                 if system_info == 'Linux':
                     sg.popup('错误，你的系统可能缺少相应安装包',
                              '请输入以下指令安装相关依赖',
-                             'sudo apt-get install xsel xclip', title='错误')
+                             'sudo apt-get install xsel xclip', title='错误',font=my_font_style1)
                 else:
                     sg.popup(err)
+        elif event == '检测ip变动':
+            list2 = load_data()  # 加载ip列表
+            if len(list2) == 0:  # 如果为空
+                sg.popup('当前Ip列表为空，请重新点击', title='提示', auto_close=True,
+                         auto_close_duration=3, font=my_font_style1)
+                list2.append(public_ip)
+                save_data(list2)
+            elif public_ip in list2:  # 如果Ip在集合中
+                sg.popup('ip未发生变动', auto_close=True, auto_close_duration=4, title='提示', font=my_font_style1)
+                sg.popup('历史Ip为', list2, auto_close=True,
+                         auto_close_duration=4, title='提示',
+                         font=my_font_style1)
+            elif public_ip not in list2:
+                sg.popup('ip发生变化', auto_close=True, auto_close_duration=3, title='提示', font=my_font_style1)
+                list2.append(public_ip)
+                save_data(list2)
     windows.close()
