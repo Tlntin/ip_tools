@@ -157,8 +157,7 @@ def start_check(style1='线路1'):
         public_ip1 = thread.get_public_ip2()  # 采用线路二检测
     windows0.close()
     b = time.time()
-    print(b-a)
-    return system_info1, local_ip1, public_ip1
+    return system_info1, local_ip1, public_ip1, b-a
 
 
 if __name__ == "__main__":
@@ -171,7 +170,6 @@ if __name__ == "__main__":
         [sg.Button('开始检测'), sg.Button('退出')]
     ]
     windows_1 = sg.Window('python网络查询工具V1.02', layout=layout_1, font=my_font_style1, size=(280, 80))
-    style_1 = windows_1['style']
     system_info, local_ip, public_ip = (None, None, None)
     for i in range(2):
         event_1, value_1 = windows_1.read()
@@ -179,7 +177,9 @@ if __name__ == "__main__":
             sg.popup('闲着你，干嘛打开我')
             break
         elif event_1 == '开始检测':
-            system_info, local_ip, public_ip = start_check(style_1)
+            style_1 = windows_1['style'].get()
+            system_info, local_ip, public_ip, time1 = start_check(style_1)
+            sg.popup('获取完成，共用时{}秒'.format(round(time1, 2)), auto_close=True, auto_close_duration=2)
             break
     windows_1.close()
     layout = [
@@ -212,6 +212,7 @@ if __name__ == "__main__":
                              '请输入以下指令安装相关依赖',
                              'sudo apt-get install xsel xclip', title='错误',font=my_font_style1)
                 else:
+                    sg.popup(err)
                     sg.popup(err)
         elif event == '检测ip变动':
             list2 = load_data()  # 加载ip列表
