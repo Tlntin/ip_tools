@@ -7,26 +7,59 @@ import pyperclip
 import time
 import os
 import json
+import threading
 
 
-def get_public_ip():
-    """
-    此函数用于获取当前设备下的公网ip
-    :return:公网ip地址
-    """
-    public_ip1 = '0.0.0.0'
-    for ii in range(3):
+class MyThread(threading.Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        pass
+
+    @staticmethod
+    def get_public_ip():
+        """
+        此函数用于获取当前设备下的公网ip
+        :return:公网ip地址
+        """
+        public_ip1 = None
         try:
-            response = requests.get('http://myip.kkcha.com/', timeout=10)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
+                                AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
+            }
+            response = requests.get('http://myip.kkcha.com/', headers=headers, timeout=5)
             html = response.text
             p = re.compile('var sRemoteAddr = \'(.*?)\'')
             result = p.search(html)
             public_ip1 = result.group(1)
-            break
         except Exception as err:
             print(err)
-            time.sleep(5)
-    return public_ip1
+        return public_ip1
+
+    @staticmethod
+    def get_public_ip2():
+        """
+        此函数用于获取当前公网下的ip,换了个接口
+        :param
+        """
+        public_ip1 = '0.0.0.0'
+        for i in range(3):
+            try:
+                url = 'https://www.ip.cn/'
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
+                    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
+                }
+                response = requests.get(url, headers=headers, timeout=5)
+                html = response.text
+                p = re.compile('<code>(.*?)</code>')
+                result = p.search(html)
+                public_ip1 = result.group(1)
+            except Exception as err2:
+                print(err2)
+        return public_ip1
 
 
 def get_private_ip():
@@ -98,20 +131,64 @@ def save_data(list1, path1='./data/data.json'):
         f.close()
 
 
+def start_check(style1='线路1'):
+    """
+    :param style1:选择抓取公网Ip的线路
+    """
+    a = time.time()
+    layout0 = [[sg.Text('正在获取你的ip')],
+              [sg.ProgressBar(100, orientation='h', key='progressbar', size=(60, 20)),
+               sg.Text('', size=(2, 0), key='pct'),
+               sg.Text('%')],
+              [sg.Cancel()]]
+    windows0 = sg.Window('python网络查询工具V1.01', layout0)
+    progress_bar = windows0['progressbar']
+    for i in range(100):
+        windows0.read(timeout=20)
+        progress_bar.UpdateBar(i + 1)
+        windows0['pct'].update(i)
+    system_info1, local_ip1 = get_sys_info()  # 获取系统信息和局域网ip
+    thread = MyThread()
+    thread.start()
+    public_ip1 = '0.0.0.0'
+    if style1 == '线路1':
+        public_ip1 = thread.get_public_ip()  # 采用线路一检测
+    elif style1 == '线路2':
+        public_ip1 = thread.get_public_ip2  # 采用线路二检测
+    windows0.close()
+    b = time.time()
+    print(b-a)
+    return system_info1, local_ip1, public_ip1
+
+
 if __name__ == "__main__":
-    system_info, local_ip = get_sys_info()  # 获取系统信息和局域网ip
-    public_ip = get_public_ip()   # 获取公网ip地址
     # -- 开始构件GUI --#
     # 设置自定义字体
     my_font = 'Deja_Vu_Sans_Mono.ttf'
     my_font_style1 = (my_font, 11, "normal")
+    layout_1 = [
+        [sg.Text('选择线路：'), sg.InputCombo(values=['线路1', '线路2'], key='style', size=(10, 10))],
+        [sg.Button('开始检测'), sg.Button('退出')]
+    ]
+    windows_1 = sg.Window('python网络查询工具V1.02', layout=layout_1, font=my_font_style1, size=(280, 80))
+    style_1 = windows_1['style']
+    system_info, local_ip, public_ip = (None, None, None)
+    for i in range(2):
+        event_1, value_1 = windows_1.read()
+        if event_1 in ('退出', None):
+            sg.popup('闲着你，干嘛打开我')
+            break
+        elif event_1 == '开始检测':
+            system_info, local_ip, public_ip = start_check()
+            break
+    windows_1.close()
     layout = [
         [sg.Text('当前系统：'), sg.Text(system_info)],
         [sg.Text('局域网ip:'), sg.Text(local_ip), sg.Button('复制1')],
         [sg.Text('公网ip:'), sg.Text(public_ip), sg.Button('复制2')],
         [sg.Button('检测ip变动'), sg.Button('退出')]
     ]
-    windows = sg.Window('python网络查询工具V1.01', layout=layout, font=my_font_style1, size=(300, 140))
+    windows = sg.Window('python网络查询工具V1.02', layout=layout, font=my_font_style1, size=(280, 140))
     for i in range(5):
         event, values = windows.read()
         if event in (None, '退出'):
