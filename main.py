@@ -154,7 +154,7 @@ def start_check(style1='线路1'):
     if style1 == '线路1':
         public_ip1 = thread.get_public_ip()  # 采用线路一检测
     elif style1 == '线路2':
-        public_ip1 = thread.get_public_ip2  # 采用线路二检测
+        public_ip1 = thread.get_public_ip2()  # 采用线路二检测
     windows0.close()
     b = time.time()
     print(b-a)
@@ -179,7 +179,7 @@ if __name__ == "__main__":
             sg.popup('闲着你，干嘛打开我')
             break
         elif event_1 == '开始检测':
-            system_info, local_ip, public_ip = start_check()
+            system_info, local_ip, public_ip = start_check(style_1)
             break
     windows_1.close()
     layout = [
