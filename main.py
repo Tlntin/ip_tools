@@ -24,18 +24,19 @@ class MyThread(threading.Thread):
         :return:公网ip地址
         """
         public_ip1 = None
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
-                                AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
-            }
-            response = requests.get('http://myip.kkcha.com/', headers=headers, timeout=5)
-            html = response.text
-            p = re.compile('var sRemoteAddr = \'(.*?)\'')
-            result = p.search(html)
-            public_ip1 = result.group(1)
-        except Exception as err:
-            print(err)
+        for ii in range(4):
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
+                                    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
+                }
+                response = requests.get('http://myip.kkcha.com/', headers=headers, timeout=5)
+                html = response.text
+                p = re.compile('var sRemoteAddr = \'(.*?)\'')
+                result = p.search(html)
+                public_ip1 = result.group(1)
+            except Exception as err:
+                print(err)
         return public_ip1
 
     @staticmethod
@@ -45,7 +46,7 @@ class MyThread(threading.Thread):
         :param
         """
         public_ip1 = '0.0.0.0'
-        for i in range(3):
+        for i in range(4):
             try:
                 url = 'https://www.ip.cn/'
                 headers = {
@@ -137,19 +138,20 @@ def start_check(style1='线路1'):
     """
     a = time.time()
     layout0 = [[sg.Text('正在获取你的ip')],
-              [sg.ProgressBar(100, orientation='h', key='progressbar', size=(60, 20)),
+              [sg.ProgressBar(100, orientation='h', key='progressbar', size=(40, 20)),
                sg.Text('', size=(2, 0), key='pct'),
                sg.Text('%')],
               [sg.Cancel()]]
-    windows0 = sg.Window('python网络查询工具V1.01', layout0)
+    windows0 = sg.Window('python网络查询工具V1.02', layout0)
     progress_bar = windows0['progressbar']
-    for i in range(100):
+    for iii in range(100):
         windows0.read(timeout=20)
-        progress_bar.UpdateBar(i + 1)
-        windows0['pct'].update(i)
+        progress_bar.UpdateBar(iii + 1)
+        windows0['pct'].update(iii)
     system_info1, local_ip1 = get_sys_info()  # 获取系统信息和局域网ip
     thread = MyThread()
     thread.start()
+    thread.join()
     public_ip1 = '0.0.0.0'
     if style1 == '线路1':
         public_ip1 = thread.get_public_ip()  # 采用线路一检测
@@ -166,10 +168,10 @@ if __name__ == "__main__":
     my_font = 'Deja_Vu_Sans_Mono.ttf'
     my_font_style1 = (my_font, 11, "normal")
     layout_1 = [
-        [sg.Text('选择线路：'), sg.InputCombo(values=['线路1', '线路2'], key='style', size=(10, 10))],
+        [sg.Text('选择线路：'), sg.InputCombo(values=['线路1', '线路2'], default_value='线路1', key='style', size=(10, 10))],
         [sg.Button('开始检测'), sg.Button('退出')]
     ]
-    windows_1 = sg.Window('python网络查询工具V1.02', layout=layout_1, font=my_font_style1, size=(280, 80))
+    windows_1 = sg.Window('python网络查询工具V1.02', layout=layout_1, font=my_font_style1, size=(320, 80))
     system_info, local_ip, public_ip = (None, None, None)
     for i in range(2):
         event_1, value_1 = windows_1.read()
@@ -184,11 +186,11 @@ if __name__ == "__main__":
     windows_1.close()
     layout = [
         [sg.Text('当前系统：'), sg.Text(system_info)],
-        [sg.Text('局域网ip:'), sg.Text(local_ip), sg.Button('复制1')],
-        [sg.Text('公网ip:'), sg.Text(public_ip), sg.Button('复制2')],
-        [sg.Button('检测ip变动'), sg.Button('退出')]
+        [sg.Text('局域网ip:'), sg.Text(local_ip, key='local_ip'), sg.Button('复制1')],
+        [sg.Text('公网ip:'), sg.Text(public_ip, key='public_ip'), sg.Button('复制2')],
+        [sg.Button('检测ip变动'), sg.Button('重新检测ip'), sg.Button('退出')]
     ]
-    windows = sg.Window('python网络查询工具V1.02', layout=layout, font=my_font_style1, size=(280, 140))
+    windows = sg.Window('python网络查询工具V1.02', layout=layout, font=my_font_style1, size=(320, 140))
     for i in range(5):
         event, values = windows.read()
         if event in (None, '退出'):
@@ -230,4 +232,8 @@ if __name__ == "__main__":
                 sg.popup('ip发生变化', auto_close=True, auto_close_duration=3, title='提示', font=my_font_style1)
                 list2.append(public_ip)
                 save_data(list2)
+        elif event == '重新检测ip':
+            system_info, local_ip, public_ip, time1 = start_check(style_1)
+            sg.popup('获取完成，共用时{}秒'.format(round(time1, 2)), auto_close=True, auto_close_duration=2)
+            windows['public_ip'].update(public_ip)
     windows.close()
